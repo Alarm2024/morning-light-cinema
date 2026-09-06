@@ -1,8 +1,13 @@
 import { GoogleGenAI } from '@google/genai';
 import { getEnv } from './env.js';
 
-const DEFAULT_MODEL = 'gemini-1.5-flash';
-const MODEL_CHAIN = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+const DEFAULT_MODEL = 'gemini-2.5-flash';
+const MODEL_CHAIN = [
+  'gemini-2.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.6-flash',
+  'gemini-flash-lite-latest',
+];
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_MS = 1000;
 
@@ -34,6 +39,16 @@ export function isRetryableGeminiError(err) {
     msg.includes('503') ||
     msg.includes('HIGH DEMAND')
   );
+}
+
+/** Retired or missing models (404) should skip to the next model in the chain. */
+export function isFallbackEligibleGeminiError(err) {
+  if (isRetryableGeminiError(err)) return true;
+  if (!err) return false;
+  const status = err.status ?? err.statusCode;
+  if (status === 404) return true;
+  const msg = String(err.message || err).toUpperCase();
+  return msg.includes('NOT_FOUND') || msg.includes('404');
 }
 
 export function formatGeminiUserError(err) {
@@ -133,10 +148,10 @@ export async function generateStoryboard(theme, research) {
     } catch (err) {
       lastErr = err;
       const hasFallback = i < modelChain.length - 1;
-      if (!isRetryableGeminiError(err) || !hasFallback) {
+      if (!isFallbackEligibleGeminiError(err) || !hasFallback) {
         throw Object.assign(new Error(formatGeminiUserError(err)), { cause: err });
       }
-      console.warn(`[gemini] model ${model} exhausted retries; trying ${modelChain[i + 1]}`);
+      console.warn(`[gemini] model ${model} failed; trying ${modelChain[i + 1]}`);
     }
   }
 
