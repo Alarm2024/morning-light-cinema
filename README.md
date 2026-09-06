@@ -15,9 +15,9 @@ Agentic Cinema MVP (Parallel track): theme prompt → Parallel Search cited rese
 
 ## Gemini model
 
-Default primary model is `gemini-1.5-flash` (stable). Override with `GEMINI_MODEL` in `.env`.
+Default primary model is `gemini-2.5-flash`. Override with `GEMINI_MODEL` in `.env`.
 
-On 503/high-demand errors the agent retries, then falls back in order: `gemini-1.5-flash` → `gemini-2.0-flash` → `gemini-2.5-flash`.
+On 503/high-demand errors the agent retries with exponential backoff, then falls back in order: `gemini-2.5-flash` → `gemini-2.5-flash-lite` → `gemini-3.5-flash-lite` → `gemini-3.6-flash`. Retired models (404 NOT_FOUND) skip to the next model without retrying.
 
 ## Smoke
 
