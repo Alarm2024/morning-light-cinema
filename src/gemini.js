@@ -1,6 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 import { getEnv } from './env.js';
 
+const DEFAULT_MODEL = 'gemini-2.5-flash';
+const MODEL_CHAIN = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+const RETRY_ATTEMPTS = 3;
+const RETRY_BASE_MS = 1000;
+
 function extractJson(text) {
   if (!text) throw new Error('Empty Gemini response');
   let t = String(text).trim();
@@ -12,10 +17,62 @@ function extractJson(text) {
   return JSON.parse(t);
 }
 
+export function getGeminiModelChain() {
+  const primary = getEnv('GEMINI_MODEL') || DEFAULT_MODEL;
+  const rest = MODEL_CHAIN.filter((model) => model !== primary);
+  return [primary, ...rest];
+}
+
+export function isRetryableGeminiError(err) {
+  if (!err) return false;
+  const status = err.status ?? err.statusCode;
+  if (status === 503 || status === 429) return true;
+  const msg = String(err.message || err).toUpperCase();
+  return (
+    msg.includes('UNAVAILABLE') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('503') ||
+    msg.includes('HIGH DEMAND')
+  );
+}
+
+export function formatGeminiUserError(err) {
+  if (isRetryableGeminiError(err)) {
+    return 'Gemini busy — try again in a minute';
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.trim().startsWith('{') || msg.includes('"error"')) {
+    return 'Gemini generation failed — please try again';
+  }
+  return msg;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function generateContentWithRetry(ai, model, prompt) {
+  let lastErr;
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await ai.models.generateContent({ model, contents: prompt });
+    } catch (err) {
+      lastErr = err;
+      const retryable = isRetryableGeminiError(err);
+      if (!retryable || attempt === RETRY_ATTEMPTS) throw err;
+      const delay = RETRY_BASE_MS * 2 ** (attempt - 1);
+      console.warn(
+        `[gemini] ${model} attempt ${attempt}/${RETRY_ATTEMPTS} failed (${err.message}); retry in ${delay}ms`,
+      );
+      await sleep(delay);
+    }
+  }
+  throw lastErr;
+}
+
 export async function generateStoryboard(theme, research) {
   const apiKey = getEnv('GEMINI_API_KEY');
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
-  const model = getEnv('GEMINI_MODEL') || 'gemini-2.5-flash';
 
   const sourcesBlock = (research.sources || [])
     .slice(0, 12)
@@ -57,15 +114,31 @@ export async function generateStoryboard(theme, research) {
   ].join('\n');
 
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model,
-    contents: prompt,
-  });
+  const modelChain = getGeminiModelChain();
+  let lastErr;
 
-  const text = response.text || '';
-  const storyboard = extractJson(text);
-  if (!Array.isArray(storyboard.scenes) || storyboard.scenes.length !== 6) {
-    throw new Error('Gemini did not return exactly 6 scenes');
+  for (let i = 0; i < modelChain.length; i++) {
+    const model = modelChain[i];
+    try {
+      const response = await generateContentWithRetry(ai, model, prompt);
+      const text = response.text || '';
+      const storyboard = extractJson(text);
+      if (!Array.isArray(storyboard.scenes) || storyboard.scenes.length !== 6) {
+        throw new Error('Gemini did not return exactly 6 scenes');
+      }
+      if (i > 0) {
+        console.warn(`[gemini] succeeded with fallback model ${model}`);
+      }
+      return { model, storyboard, raw_text: text };
+    } catch (err) {
+      lastErr = err;
+      const hasFallback = i < modelChain.length - 1;
+      if (!isRetryableGeminiError(err) || !hasFallback) {
+        throw Object.assign(new Error(formatGeminiUserError(err)), { cause: err });
+      }
+      console.warn(`[gemini] model ${model} exhausted retries; trying ${modelChain[i + 1]}`);
+    }
   }
-  return { model, storyboard, raw_text: text };
+
+  throw Object.assign(new Error(formatGeminiUserError(lastErr)), { cause: lastErr });
 }
