@@ -9,9 +9,9 @@ import {
 
 const EXPECTED_CHAIN = [
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
   'gemini-3.5-flash-lite',
   'gemini-3.6-flash',
+  'gemini-flash-lite-latest',
 ];
 
 test('getGeminiModelChain defaults to gemini-2.5-flash with fallbacks', () => {
@@ -24,10 +24,16 @@ test('getGeminiModelChain honors GEMINI_MODEL without duplicating fallbacks', ()
   assert.deepEqual(getGeminiModelChain(), [
     'gemini-3.6-flash',
     'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
     'gemini-3.5-flash-lite',
+    'gemini-flash-lite-latest',
   ]);
   delete process.env.GEMINI_MODEL;
+});
+
+test('getGeminiModelChain has no gemini-2.5-flash-lite in default chain', () => {
+  delete process.env.GEMINI_MODEL;
+  const chain = getGeminiModelChain();
+  assert.equal(chain.includes('gemini-2.5-flash-lite'), false);
 });
 
 test('getGeminiModelChain has no gemini-1.5 in default chain', () => {

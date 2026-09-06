@@ -4,9 +4,9 @@ import { getEnv } from './env.js';
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 const MODEL_CHAIN = [
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
   'gemini-3.5-flash-lite',
   'gemini-3.6-flash',
+  'gemini-flash-lite-latest',
 ];
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_MS = 1000;
