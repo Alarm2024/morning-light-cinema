@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { keyMeta, loadDotEnv } from './env.js';
 import { parallelSearch } from './parallel.js';
-import { generateStoryboard } from './gemini.js';
+import { generateStoryboard, getGeminiModelChain } from './gemini.js';
 
 loadDotEnv();
 
@@ -15,6 +15,7 @@ const parallel = keyMeta('PARALLEL_API_KEY');
 const gemini = keyMeta('GEMINI_API_KEY');
 console.log('PARALLEL_API_KEY set=' + parallel.set + ' length=' + parallel.length);
 console.log('GEMINI_API_KEY set=' + gemini.set + ' length=' + gemini.length);
+console.log('GEMINI model chain=' + getGeminiModelChain().join(' → '));
 
 if (!parallel.set || !gemini.set) {
   console.log('Skipping live generate — both keys required.');

@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatGeminiUserError, getGeminiModelChain, isRetryableGeminiError } from './gemini.js';
 
-test('getGeminiModelChain defaults to gemini-2.5-flash with fallbacks', () => {
+test('getGeminiModelChain defaults to gemini-1.5-flash with fallbacks', () => {
   delete process.env.GEMINI_MODEL;
-  assert.deepEqual(getGeminiModelChain(), ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']);
+  assert.deepEqual(getGeminiModelChain(), ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash']);
 });
 
 test('getGeminiModelChain honors GEMINI_MODEL without duplicating fallbacks', () => {
   process.env.GEMINI_MODEL = 'gemini-2.0-flash';
-  assert.deepEqual(getGeminiModelChain(), ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']);
+  assert.deepEqual(getGeminiModelChain(), ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash']);
   delete process.env.GEMINI_MODEL;
 });
 

@@ -10,12 +10,22 @@ Agentic Cinema MVP (Parallel track): theme prompt → Parallel Search cited rese
 
 ## API
 
-- `GET /api/health` — providers parallel+gemini booleans (no secrets)
+- `GET /api/health` — providers parallel+gemini booleans (no secrets); reports primary Gemini model and fallbacks
 - `POST /api/generate` — `{ "theme": "..." }`
+
+## Gemini model
+
+Default primary model is `gemini-1.5-flash` (stable). Override with `GEMINI_MODEL` in `.env`.
+
+On 503/high-demand errors the agent retries, then falls back in order: `gemini-1.5-flash` → `gemini-2.0-flash` → `gemini-2.5-flash`.
 
 ## Smoke
 
 `npm run smoke` — prints key set/length; if both set, writes `sample-out.json`
+
+## Tests
+
+`npm test` — unit tests for Gemini model chain, retry detection, and error formatting
 
 ## Render
 
