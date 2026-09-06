@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Morning Light Cinema Agent</title>
+<style>
+:root{--bg:#07070b;--panel:#12121a;--gold:#e7c27d;--text:#f4efe6;--muted:#9a9488;--line:#2a2733;--danger:#ff8f8f}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Georgia,serif;color:var(--text);background:radial-gradient(1200px 600px at 20% -10%,rgba(231,194,125,.18),transparent 60%),radial-gradient(900px 500px at 90% 10%,rgba(90,70,140,.25),transparent 55%),var(--bg)}
+main{max-width:920px;margin:0 auto;padding:48px 20px 80px}h1{font-weight:500;letter-spacing:.04em;font-size:clamp(1.8rem,4vw,2.6rem);margin:0 0 8px}
+.tag{color:var(--gold);text-transform:uppercase;letter-spacing:.22em;font-size:.72rem;margin-bottom:18px}
+p.lead{color:var(--muted);line-height:1.5;max-width:62ch}
+.panel{margin-top:28px;background:linear-gradient(180deg,rgba(255,255,255,.03),transparent),var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+label{display:block;font-size:.85rem;color:var(--gold);margin-bottom:8px;letter-spacing:.06em}
+textarea{width:100%;min-height:110px;resize:vertical;border-radius:12px;border:1px solid var(--line);background:#0b0b12;color:var(--text);padding:14px 16px;font:inherit;line-height:1.45}
+textarea:focus{outline:2px solid rgba(231,194,125,.35);border-color:var(--gold)}
+.row{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+button{appearance:none;border:0;border-radius:999px;padding:12px 22px;background:linear-gradient(135deg,#f0d7a0,#c9a15b);color:#1a1408;font-weight:700;letter-spacing:.04em;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}.status{color:var(--muted);font-size:.9rem}.error{color:var(--danger);margin-top:12px;white-space:pre-wrap}
+.scene{border-top:1px solid var(--line);padding:18px 0}.scene:first-child{border-top:0}.scene h3{margin:0 0 8px;color:var(--gold);font-weight:500}
+.meta{color:var(--muted);font-size:.92rem;line-height:1.45}.cites a{color:#b7c7ff}#out{display:none;margin-top:24px}#out.show{display:block}
+</style>
+</head>
+<body>
+<main>
+<div class="tag">Agentic Cinema · Parallel × Gemini</div>
+<h1>Morning Light Cinema Agent</h1>
+<p class="lead">Enter a theme. Parallel gathers cited research; Gemini turns it into a six-scene golden-hour trailer storyboard.</p>
+<div class="panel">
+<label for="theme">Theme prompt</label>
+<textarea id="theme" placeholder="Solana dawn over desert dunes, golden hour IMAX trailer"></textarea>
+<div class="row"><button id="go" type="button">Generate storyboard</button><span class="status" id="status">Ready</span></div>
+<div class="error" id="error"></div>
+</div>
+<div class="panel" id="out">
+<h2 id="title" style="margin-top:0"></h2>
+<p class="lead" id="logline"></p>
+<div id="scenes"></div>
+<div class="meta cites" id="cites"></div>
+</div>
+</main>
+<script>
+const themeEl=document.getElementById('theme');
+const go=document.getElementById('go');
+const status=document.getElementById('status');
+const error=document.getElementById('error');
+const out=document.getElementById('out');
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+go.addEventListener('click',async()=>{
+  error.textContent=''; out.classList.remove('show');
+  const theme=themeEl.value.trim();
+  if(theme.length<3){error.textContent='Enter a theme (at least 3 characters).';return;}
+  go.disabled=true; status.textContent='Researching + directing…';
+  try{
+    const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme})});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+    document.getElementById('title').textContent=data.storyboard.title||'Untitled';
+    document.getElementById('logline').textContent=data.storyboard.logline||'';
+    const scenes=document.getElementById('scenes'); scenes.innerHTML='';
+    (data.storyboard.scenes||[]).forEach(s=>{
+      const div=document.createElement('div'); div.className='scene';
+      div.innerHTML='<h3>Scene '+s.n+' — '+escapeHtml(s.heading||'')+'</h3>'+
+        '<div class="meta"><strong>Visual:</strong> '+escapeHtml(s.visual||'')+'</div>'+
+        '<div class="meta"><strong>VO:</strong> '+escapeHtml(s.voiceover||'')+'</div>'+
+        '<div class="meta"><strong>Music:</strong> '+escapeHtml(s.music||'')+'</div>'+
+        '<div class="meta cites"><strong>Citations:</strong> '+(s.citation_urls||[]).map(u=>'<a href="'+escapeHtml(u)+'" target="_blank" rel="noopener">'+escapeHtml(u)+'</a>').join('<br/>')+'</div';
+      scenes.appendChild(div);
+    });
+    const sources=(data.research&&data.research.sources)||[];
+    document.getElementById('cites').innerHTML='<hr style="border-color:#2a2733;margin:18px 0"/><strong>Research sources ('+sources.length+')</strong><br/>'+
+      sources.map(s=>'<a href="'+escapeHtml(s.url)+'" target="_blank" rel="noopener">'+escapeHtml(s.title||s.url)+'</a>').join('<br/>');
+    out.classList.add('show'); status.textContent='Done · '+(data.model||'gemini');
+  }catch(e){error.textContent=e.message||String(e); status.textContent='Failed';}
+  finally{go.disabled=false;}
+});
+</script>
+</body>
+</html>
