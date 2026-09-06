@@ -1,8 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import { getEnv } from './env.js';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash';
-const MODEL_CHAIN = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+const DEFAULT_MODEL = 'gemini-1.5-flash';
+const MODEL_CHAIN = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_MS = 1000;
 
