@@ -1,0 +1,21 @@
+{
+  "name": "morning-light-cinema",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agentic Cinema MVP: theme to Parallel research to Gemini 6-scene storyboard",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "smoke": "node src/smoke.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@google/genai": "^1.16.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
