@@ -4,7 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import { getEnv, keyMeta, loadDotEnv } from './env.js';
 import { parallelSearch } from './parallel.js';
-import { generateStoryboard } from './gemini.js';
+import { formatGeminiUserError, generateStoryboard, getGeminiModelChain } from './gemini.js';
 
 loadDotEnv();
 
@@ -26,7 +26,8 @@ app.get('/api/health', (_req, res) => {
       parallel: parallel.set,
       gemini: gemini.set,
     },
-    model: getEnv('GEMINI_MODEL') || 'gemini-2.5-flash',
+    model: getGeminiModelChain()[0],
+    modelFallbacks: getGeminiModelChain().slice(1),
   });
 });
 
@@ -67,9 +68,10 @@ app.post('/api/generate', async (req, res) => {
       })),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Generate failed';
-    console.error('[generate]', message);
-    res.status(502).json({ error: message });
+    const message = formatGeminiUserError(err) || (err instanceof Error ? err.message : 'Generate failed');
+    const status = message.includes('Gemini busy') ? 503 : 502;
+    console.error('[generate]', err instanceof Error ? err.message : message);
+    res.status(status).json({ error: message });
   }
 });
 
