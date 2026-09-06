@@ -64,7 +64,7 @@ go.addEventListener('click',async()=>{
         '<div class="meta"><strong>Visual:</strong> '+escapeHtml(s.visual||'')+'</div>'+
         '<div class="meta"><strong>VO:</strong> '+escapeHtml(s.voiceover||'')+'</div>'+
         '<div class="meta"><strong>Music:</strong> '+escapeHtml(s.music||'')+'</div>'+
-        '<div class="meta cites"><strong>Citations:</strong> '+(s.citation_urls||[]).map(u=>'<a href="'+escapeHtml(u)+'" target="_blank" rel="noopener">'+escapeHtml(u)+'</a>').join('<br/>')+'</div';
+        '<div class="meta cites"><strong>Citations:</strong> '+(s.citation_urls||[]).map(u=>'<a href="'+escapeHtml(u)+'" target="_blank" rel="noopener">'+escapeHtml(u)+'</a>').join('<br/>')+'</div>';
       scenes.appendChild(div);
     });
     const sources=(data.research&&data.research.sources)||[];
